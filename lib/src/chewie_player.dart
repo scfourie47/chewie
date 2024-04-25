@@ -560,11 +560,11 @@ class ChewieController extends ChangeNotifier {
   bool get isPlaying => vlcPlayerController.value.isPlaying;
 
   Future<dynamic> _initialize() async {
-    await vlcPlayerController.setLooping(looping);
-
     if ((autoInitialize || autoPlay) && !vlcPlayerController.value.isInitialized) {
       await vlcPlayerController.initialize();
     }
+
+    await vlcPlayerController.setLooping(looping);
 
     if (autoPlay) {
       if (fullScreenByDefault) {
