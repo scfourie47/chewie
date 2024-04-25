@@ -9,6 +9,7 @@ import 'package:chewie/src/player_with_controls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -189,9 +190,8 @@ class ChewieState extends State<Chewie> {
   }
 
   void onEnterFullScreen() {
-    final videoWidth = widget.controller.videoPlayerController.value.size.width;
-    final videoHeight =
-        widget.controller.videoPlayerController.value.size.height;
+    final videoWidth = widget.controller.vlcPlayerController.value.size.width;
+    final videoHeight = widget.controller.vlcPlayerController.value.size.height;
 
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
 
@@ -242,12 +242,12 @@ class ChewieState extends State<Chewie> {
   ///When viewing full screen on web, returning from full screen causes original video to lose the picture.
   ///We re initialise controllers for web only when returning from full screen
   void _reInitializeControllers() {
-    final prevPosition = widget.controller.videoPlayerController.value.position;
-    widget.controller.videoPlayerController.initialize().then((_) async {
+    final prevPosition = widget.controller.vlcPlayerController.value.position;
+    widget.controller.vlcPlayerController.initialize().then((_) async {
       widget.controller._initialize();
-      widget.controller.videoPlayerController.seekTo(prevPosition);
-      await widget.controller.videoPlayerController.play();
-      widget.controller.videoPlayerController.pause();
+      widget.controller.vlcPlayerController.seekTo(prevPosition);
+      await widget.controller.vlcPlayerController.play();
+      widget.controller.vlcPlayerController.pause();
     });
   }
 }
@@ -261,10 +261,10 @@ class ChewieState extends State<Chewie> {
 /// changes, such as entering and exiting full screen mode. To listen for
 /// changes to the playback, such as a change to the seek position of the
 /// player, please use the standard information provided by the
-/// `VideoPlayerController`.
+/// `VlcPlayerController`.
 class ChewieController extends ChangeNotifier {
   ChewieController({
-    required this.videoPlayerController,
+    required this.vlcPlayerController,
     this.optionsTranslation,
     this.aspectRatio,
     this.autoInitialize = false,
@@ -312,7 +312,7 @@ class ChewieController extends ChangeNotifier {
   }
 
   ChewieController copyWith({
-    VideoPlayerController? videoPlayerController,
+    VlcPlayerController? vlcPlayerController,
     OptionsTranslation? optionsTranslation,
     double? aspectRatio,
     bool? autoInitialize,
@@ -360,8 +360,7 @@ class ChewieController extends ChangeNotifier {
   }) {
     return ChewieController(
       draggableProgressBar: draggableProgressBar ?? this.draggableProgressBar,
-      videoPlayerController:
-          videoPlayerController ?? this.videoPlayerController,
+      vlcPlayerController: vlcPlayerController ?? this.vlcPlayerController,
       optionsTranslation: optionsTranslation ?? this.optionsTranslation,
       aspectRatio: aspectRatio ?? this.aspectRatio,
       autoInitialize: autoInitialize ?? this.autoInitialize,
@@ -369,14 +368,11 @@ class ChewieController extends ChangeNotifier {
       startAt: startAt ?? this.startAt,
       looping: looping ?? this.looping,
       fullScreenByDefault: fullScreenByDefault ?? this.fullScreenByDefault,
-      cupertinoProgressColors:
-          cupertinoProgressColors ?? this.cupertinoProgressColors,
-      materialProgressColors:
-          materialProgressColors ?? this.materialProgressColors,
+      cupertinoProgressColors: cupertinoProgressColors ?? this.cupertinoProgressColors,
+      materialProgressColors: materialProgressColors ?? this.materialProgressColors,
       placeholder: placeholder ?? this.placeholder,
       overlay: overlay ?? this.overlay,
-      showControlsOnInitialize:
-          showControlsOnInitialize ?? this.showControlsOnInitialize,
+      showControlsOnInitialize: showControlsOnInitialize ?? this.showControlsOnInitialize,
       showOptions: showOptions ?? this.showOptions,
       optionsBuilder: optionsBuilder ?? this.optionsBuilder,
       additionalOptions: additionalOptions ?? this.additionalOptions,
@@ -389,23 +385,20 @@ class ChewieController extends ChangeNotifier {
       isLive: isLive ?? this.isLive,
       allowFullScreen: allowFullScreen ?? this.allowFullScreen,
       allowMuting: allowMuting ?? this.allowMuting,
-      allowPlaybackSpeedChanging:
-          allowPlaybackSpeedChanging ?? this.allowPlaybackSpeedChanging,
+      allowPlaybackSpeedChanging: allowPlaybackSpeedChanging ?? this.allowPlaybackSpeedChanging,
       useRootNavigator: useRootNavigator ?? this.useRootNavigator,
       playbackSpeeds: playbackSpeeds ?? this.playbackSpeeds,
-      systemOverlaysOnEnterFullScreen: systemOverlaysOnEnterFullScreen ??
-          this.systemOverlaysOnEnterFullScreen,
+      systemOverlaysOnEnterFullScreen:
+          systemOverlaysOnEnterFullScreen ?? this.systemOverlaysOnEnterFullScreen,
       deviceOrientationsOnEnterFullScreen:
-          deviceOrientationsOnEnterFullScreen ??
-              this.deviceOrientationsOnEnterFullScreen,
+          deviceOrientationsOnEnterFullScreen ?? this.deviceOrientationsOnEnterFullScreen,
       systemOverlaysAfterFullScreen:
           systemOverlaysAfterFullScreen ?? this.systemOverlaysAfterFullScreen,
-      deviceOrientationsAfterFullScreen: deviceOrientationsAfterFullScreen ??
-          this.deviceOrientationsAfterFullScreen,
+      deviceOrientationsAfterFullScreen:
+          deviceOrientationsAfterFullScreen ?? this.deviceOrientationsAfterFullScreen,
       routePageBuilder: routePageBuilder ?? this.routePageBuilder,
       hideControlsTimer: hideControlsTimer ?? this.hideControlsTimer,
-      progressIndicatorDelay:
-          progressIndicatorDelay ?? this.progressIndicatorDelay,
+      progressIndicatorDelay: progressIndicatorDelay ?? this.progressIndicatorDelay,
     );
   }
 
@@ -444,7 +437,7 @@ class ChewieController extends ChangeNotifier {
   Subtitles? subtitle;
 
   /// The controller for the video you want to play
-  final VideoPlayerController videoPlayerController;
+  final VlcPlayerController vlcPlayerController;
 
   /// Initialize the Video on Startup. This will prep the video for playback.
   final bool autoInitialize;
@@ -482,8 +475,7 @@ class ChewieController extends ChangeNotifier {
 
   /// When the video playback runs into an error, you can build a custom
   /// error message.
-  final Widget Function(BuildContext context, String errorMessage)?
-      errorBuilder;
+  final Widget Function(BuildContext context, String errorMessage)? errorBuilder;
 
   /// The Aspect Ratio of the Video. Important to get the correct size of the
   /// video!
@@ -566,14 +558,13 @@ class ChewieController extends ChangeNotifier {
 
   bool get isFullScreen => _isFullScreen;
 
-  bool get isPlaying => videoPlayerController.value.isPlaying;
+  bool get isPlaying => vlcPlayerController.value.isPlaying;
 
   Future<dynamic> _initialize() async {
-    await videoPlayerController.setLooping(looping);
+    await vlcPlayerController.setLooping(looping);
 
-    if ((autoInitialize || autoPlay) &&
-        !videoPlayerController.value.isInitialized) {
-      await videoPlayerController.initialize();
+    if ((autoInitialize || autoPlay) && !vlcPlayerController.value.isInitialized) {
+      await vlcPlayerController.initialize();
     }
 
     if (autoPlay) {
@@ -581,22 +572,22 @@ class ChewieController extends ChangeNotifier {
         enterFullScreen();
       }
 
-      await videoPlayerController.play();
+      await vlcPlayerController.play();
     }
 
     if (startAt != null) {
-      await videoPlayerController.seekTo(startAt!);
+      await vlcPlayerController.seekTo(startAt!);
     }
 
     if (fullScreenByDefault) {
-      videoPlayerController.addListener(_fullScreenListener);
+      vlcPlayerController.addListener(_fullScreenListener);
     }
   }
 
   Future<void> _fullScreenListener() async {
-    if (videoPlayerController.value.isPlaying && !_isFullScreen) {
+    if (vlcPlayerController.value.isPlaying && !_isFullScreen) {
       enterFullScreen();
-      videoPlayerController.removeListener(_fullScreenListener);
+      vlcPlayerController.removeListener(_fullScreenListener);
     }
   }
 
@@ -620,24 +611,24 @@ class ChewieController extends ChangeNotifier {
   }
 
   Future<void> play() async {
-    await videoPlayerController.play();
+    await vlcPlayerController.play();
   }
 
   // ignore: avoid_positional_boolean_parameters
   Future<void> setLooping(bool looping) async {
-    await videoPlayerController.setLooping(looping);
+    await vlcPlayerController.setLooping(looping);
   }
 
   Future<void> pause() async {
-    await videoPlayerController.pause();
+    await vlcPlayerController.pause();
   }
 
   Future<void> seekTo(Duration moment) async {
-    await videoPlayerController.seekTo(moment);
+    await vlcPlayerController.seekTo(moment);
   }
 
-  Future<void> setVolume(double volume) async {
-    await videoPlayerController.setVolume(volume);
+  Future<void> setVolume(int volume) async {
+    await vlcPlayerController.setVolume(volume);
   }
 
   void setSubtitle(List<Subtitle> newSubtitle) {
@@ -655,6 +646,5 @@ class ChewieControllerProvider extends InheritedWidget {
   final ChewieController controller;
 
   @override
-  bool updateShouldNotify(ChewieControllerProvider oldWidget) =>
-      controller != oldWidget.controller;
+  bool updateShouldNotify(ChewieControllerProvider oldWidget) => controller != oldWidget.controller;
 }

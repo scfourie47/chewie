@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:chewie/chewie.dart';
 import 'package:chewie_example/app/theme.dart';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 
 class ChewieDemo extends StatefulWidget {
   const ChewieDemo({
@@ -21,8 +21,8 @@ class ChewieDemo extends StatefulWidget {
 
 class _ChewieDemoState extends State<ChewieDemo> {
   TargetPlatform? _platform;
-  late VideoPlayerController _videoPlayerController1;
-  late VideoPlayerController _videoPlayerController2;
+  late VlcPlayerController _vlcPlayerController1;
+  late VlcPlayerController _vlcPlayerController2;
   ChewieController? _chewieController;
   int? bufferDelay;
 
@@ -34,8 +34,8 @@ class _ChewieDemoState extends State<ChewieDemo> {
 
   @override
   void dispose() {
-    _videoPlayerController1.dispose();
-    _videoPlayerController2.dispose();
+    _vlcPlayerController1.dispose();
+    _vlcPlayerController2.dispose();
     _chewieController?.dispose();
     super.dispose();
   }
@@ -47,14 +47,9 @@ class _ChewieDemoState extends State<ChewieDemo> {
   ];
 
   Future<void> initializePlayer() async {
-    _videoPlayerController1 =
-        VideoPlayerController.networkUrl(Uri.parse(srcs[currPlayIndex]));
-    _videoPlayerController2 =
-        VideoPlayerController.networkUrl(Uri.parse(srcs[currPlayIndex]));
-    await Future.wait([
-      _videoPlayerController1.initialize(),
-      _videoPlayerController2.initialize()
-    ]);
+    _vlcPlayerController1 = VlcPlayerController.network(Uri.parse(srcs[currPlayIndex]).toString());
+    _vlcPlayerController2 = VlcPlayerController.network(Uri.parse(srcs[currPlayIndex]).toString());
+    await Future.wait([_vlcPlayerController1.initialize(), _vlcPlayerController2.initialize()]);
     _createChewieController();
     setState(() {});
   }
@@ -110,11 +105,10 @@ class _ChewieDemoState extends State<ChewieDemo> {
     ];
 
     _chewieController = ChewieController(
-      videoPlayerController: _videoPlayerController1,
+      vlcPlayerController: _vlcPlayerController1,
       autoPlay: true,
       looping: true,
-      progressIndicatorDelay:
-          bufferDelay != null ? Duration(milliseconds: bufferDelay!) : null,
+      progressIndicatorDelay: bufferDelay != null ? Duration(milliseconds: bufferDelay!) : null,
 
       additionalOptions: (context) {
         return <OptionItem>[
@@ -159,7 +153,7 @@ class _ChewieDemoState extends State<ChewieDemo> {
   int currPlayIndex = 0;
 
   Future<void> toggleVideo() async {
-    await _videoPlayerController1.pause();
+    await _vlcPlayerController1.pause();
     currPlayIndex += 1;
     if (currPlayIndex >= srcs.length) {
       currPlayIndex = 0;
@@ -183,8 +177,7 @@ class _ChewieDemoState extends State<ChewieDemo> {
             Expanded(
               child: Center(
                 child: _chewieController != null &&
-                        _chewieController!
-                            .videoPlayerController.value.isInitialized
+                        _chewieController!.vlcPlayerController.value.isInitialized
                     ? Chewie(
                         controller: _chewieController!,
                       )
@@ -210,8 +203,8 @@ class _ChewieDemoState extends State<ChewieDemo> {
                   child: TextButton(
                     onPressed: () {
                       setState(() {
-                        _videoPlayerController1.pause();
-                        _videoPlayerController1.seekTo(Duration.zero);
+                        _vlcPlayerController1.pause();
+                        _vlcPlayerController1.seekTo(Duration.zero);
                         _createChewieController();
                       });
                     },
@@ -225,10 +218,10 @@ class _ChewieDemoState extends State<ChewieDemo> {
                   child: TextButton(
                     onPressed: () {
                       setState(() {
-                        _videoPlayerController2.pause();
-                        _videoPlayerController2.seekTo(Duration.zero);
+                        _vlcPlayerController2.pause();
+                        _vlcPlayerController2.seekTo(Duration.zero);
                         _chewieController = _chewieController!.copyWith(
-                          videoPlayerController: _videoPlayerController2,
+                          vlcPlayerController: _vlcPlayerController2,
                           autoPlay: true,
                           looping: true,
                           /* subtitle: Subtitles([
@@ -314,8 +307,7 @@ class _ChewieDemoState extends State<ChewieDemo> {
               ListTile(
                 title: const Text("Delay"),
                 subtitle: DelaySlider(
-                  delay:
-                      _chewieController?.progressIndicatorDelay?.inMilliseconds,
+                  delay: _chewieController?.progressIndicatorDelay?.inMilliseconds,
                   onSave: (delay) async {
                     if (delay != null) {
                       bufferDelay = delay == 0 ? null : delay;

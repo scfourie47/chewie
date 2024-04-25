@@ -12,8 +12,8 @@ import 'package:chewie/src/models/option_item.dart';
 import 'package:chewie/src/models/subtitle_model.dart';
 import 'package:chewie/src/notifiers/index.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:provider/provider.dart';
-import 'package:video_player/video_player.dart';
 
 class MaterialDesktopControls extends StatefulWidget {
   const MaterialDesktopControls({
@@ -32,8 +32,8 @@ class MaterialDesktopControls extends StatefulWidget {
 class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
     with SingleTickerProviderStateMixin {
   late PlayerNotifier notifier;
-  late VideoPlayerValue _latestValue;
-  double? _latestVolume;
+  late VlcPlayerValue _latestValue;
+  int? _latestVolume;
   Timer? _hideTimer;
   Timer? _initTimer;
   late var _subtitlesPosition = Duration.zero;
@@ -47,7 +47,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
   final barHeight = 48.0 * 1.5;
   final marginSize = 5.0;
 
-  late VideoPlayerController controller;
+  late VlcPlayerController controller;
   ChewieController? _chewieController;
 
   // We know that _chewieController is set in didChangeDependencies
@@ -64,7 +64,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
     if (_latestValue.hasError) {
       return chewieController.errorBuilder?.call(
             context,
-            chewieController.videoPlayerController.value.errorDescription!,
+            chewieController.vlcPlayerController.value.errorDescription!,
           ) ??
           const Center(
             child: Icon(
@@ -100,8 +100,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
                         0.0,
                         notifier.hideStuff ? barHeight * 0.8 : 0.0,
                       ),
-                      child:
-                          _buildSubtitles(context, chewieController.subtitle!),
+                      child: _buildSubtitles(context, chewieController.subtitle!),
                     ),
                   _buildBottomBar(context),
                 ],
@@ -130,7 +129,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
   void didChangeDependencies() {
     final oldController = _chewieController;
     _chewieController = ChewieController.of(context);
-    controller = chewieController.videoPlayerController;
+    controller = chewieController.vlcPlayerController;
 
     if (oldController != chewieController) {
       _dispose();
@@ -159,8 +158,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
           _onSpeedButtonTap();
         },
         iconData: Icons.speed,
-        title: chewieController.optionsTranslation?.playbackSpeedButtonText ??
-            'Playback speed',
+        title: chewieController.optionsTranslation?.playbackSpeedButtonText ?? 'Playback speed',
       )
     ];
 
@@ -186,8 +184,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
               useRootNavigator: chewieController.useRootNavigator,
               builder: (context) => OptionsDialog(
                 options: options,
-                cancelButtonText:
-                    chewieController.optionsTranslation?.cancelButtonText,
+                cancelButtonText: chewieController.optionsTranslation?.cancelButtonText,
               ),
             );
           }
@@ -249,8 +246,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
       duration: const Duration(milliseconds: 300),
       child: Container(
         height: barHeight + (chewieController.isFullScreen ? 20.0 : 0),
-        padding:
-            EdgeInsets.only(bottom: chewieController.isFullScreen ? 10.0 : 15),
+        padding: EdgeInsets.only(bottom: chewieController.isFullScreen ? 10.0 : 15),
         child: SafeArea(
           bottom: chewieController.isFullScreen,
           child: Column(
@@ -272,8 +268,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
                         chewieController.subtitle != null &&
                         chewieController.subtitle!.isNotEmpty)
                       _buildSubtitleToggle(icon: Icons.subtitles),
-                    if (chewieController.showOptions)
-                      _buildOptionsButton(icon: Icons.settings),
+                    if (chewieController.showOptions) _buildOptionsButton(icon: Icons.settings),
                     if (chewieController.allowFullScreen) _buildExpandButton(),
                   ],
                 ),
@@ -315,9 +310,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
           ),
           child: Center(
             child: Icon(
-              chewieController.isFullScreen
-                  ? Icons.fullscreen_exit
-                  : Icons.fullscreen,
+              chewieController.isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
               color: Colors.white,
             ),
           ),
@@ -328,8 +321,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
 
   Widget _buildHitArea() {
     final bool isFinished = _latestValue.position >= _latestValue.duration;
-    final bool showPlayButton =
-        widget.showPlayButton && !_dragging && !notifier.hideStuff;
+    final bool showPlayButton = widget.showPlayButton && !_dragging && !notifier.hideStuff;
 
     return GestureDetector(
       onTap: () {
@@ -383,17 +375,17 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
   }
 
   GestureDetector _buildMuteButton(
-    VideoPlayerController controller,
+    VlcPlayerController controller,
   ) {
     return GestureDetector(
       onTap: () {
         _cancelAndRestartTimer();
 
         if (_latestValue.volume == 0) {
-          controller.setVolume(_latestVolume ?? 0.5);
+          controller.setVolume(_latestVolume ?? 50);
         } else {
           _latestVolume = controller.value.volume;
-          controller.setVolume(0.0);
+          controller.setVolume(0);
         }
       },
       child: AnimatedOpacity(
@@ -415,7 +407,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
     );
   }
 
-  GestureDetector _buildPlayPause(VideoPlayerController controller) {
+  GestureDetector _buildPlayPause(VlcPlayerController controller) {
     return GestureDetector(
       onTap: _playPause,
       child: Container(
@@ -489,8 +481,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
 
     chewieController.toggleFullScreen();
 
-    _showAfterExpandCollapseTimer =
-        Timer(const Duration(milliseconds: 300), () {
+    _showAfterExpandCollapseTimer = Timer(const Duration(milliseconds: 300), () {
       setState(() {
         _cancelAndRestartTimer();
       });
@@ -588,8 +579,7 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
             ChewieProgressColors(
               playedColor: Theme.of(context).colorScheme.secondary,
               handleColor: Theme.of(context).colorScheme.secondary,
-              bufferedColor:
-                  Theme.of(context).colorScheme.background.withOpacity(0.5),
+              bufferedColor: Theme.of(context).colorScheme.background.withOpacity(0.5),
               backgroundColor: Theme.of(context).disabledColor.withOpacity(.5),
             ),
       ),
